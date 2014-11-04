@@ -12,10 +12,15 @@
   $ = document.querySelectorAll.bind(document);
 
   document.addEventListener('DOMContentLoaded', function() {
-    var bench, cbench, ctl, send, term, ws, ws_url;
+    var bench, cbench, ctl, ping, send, term, ws, ws_url;
     send = function(data) {
       return ws.send('S' + data);
     };
+    ping = function() {
+      return ws.send('P');
+    };
+    console.log('Ping defined');
+    setInterval(ping, 10000);
     ctl = function() {
       var args, params, type;
       type = arguments[0], args = 2 <= arguments.length ? __slice.call(arguments, 1) : [];

@@ -318,6 +318,9 @@ class TermWebSocket(Route, tornado.websocket.WebSocketHandler):
             self.log.info('WRIT<%r' % message)
             self.writer.write(message[1:])
             self.writer.flush()
+        elif message[0] == 'P':
+        	# A ping.
+        	pass
 
     def shell_handler(self, fd, events):
         if events & ioloop.READ:

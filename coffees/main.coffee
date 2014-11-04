@@ -26,6 +26,12 @@ document.addEventListener 'DOMContentLoaded', ->
   send = (data) ->
     ws.send 'S' + data
 
+  ping = ->
+    ws.send 'P'
+
+  console.log 'Ping defined'
+  setInterval ping, 10000
+
   ctl = (type, args...) ->
     params = args.join(',')
     if type == 'Resize'
