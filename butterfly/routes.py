@@ -29,6 +29,7 @@ import tornado.ioloop
 import tornado.options
 import sys
 import signal
+import base64
 from butterfly import url, Route, utils, __version__
 
 ioloop = tornado.ioloop.IOLoop.instance()
@@ -96,12 +97,70 @@ def senseMotd(socket):
         .replace('\n', '\r\n')
         % (__version__))
 
+# Cribbed from http://kevinsayscode.tumblr.com/post/7362319243/easy-basic-http-authentication-with-tornado
+def require_basic_auth(handler_class):
+    # Should return the new _execute function, one which enforces
+    # authentication and only calls the inner handler's _execute() if
+    # it's present.
+    def wrap_execute(handler_execute):
+        # I've pulled this out just for clarity, but you could stick
+        # it in _execute if you wanted.  It returns True iff
+        # credentials were provided.  (The end of this function might
+        # be a good place to see if you like their username and
+        # password.)
+        def require_basic_auth(handler, kwargs):
+            auth_header = handler.request.headers.get('Authorization')
+            if auth_header is None or not auth_header.startswith('Basic '):
+                # If the browser didn't send us authorization headers,
+                # send back a response letting it know that we'd like
+                # a username and password (the "Basic" authentication
+                # method).  Without this, even if you visit put a
+                # username and password in the URL, the browser won't
+                # send it.  The "realm" option in the header is the
+                # name that appears in the dialog that pops up in your
+                # browser.
+                handler.set_status(401)
+                handler.set_header('WWW-Authenticate', 'Basic realm=Restricted')
+                handler._transforms = []
+                handler.finish()
+                return False
+            # The information that the browser sends us is
+            # base64-encoded, and in the format "username:password".
+            # Keep in mind that either username or password could
+            # still be unset, and that you should check to make sure
+            # they reflect valid credentials!
+            auth_decoded = base64.decodestring(auth_header[6:])
+            username, password = auth_decoded.split(':', 2)
+            kwargs['basicauth_user'], kwargs['basicauth_pass'] = username, password
+            return True
+
+        # Since we're going to attach this to a RequestHandler class,
+        # the first argument will wind up being a reference to an
+        # instance of that class.
+        def _execute(self, transforms, *args, **kwargs):
+            if not require_basic_auth(self, kwargs):
+                return False
+            return handler_execute(self, transforms, *args, **kwargs)
+
+        return _execute
+
+    handler_class._execute = wrap_execute(handler_class._execute)
+    return handler_class
+
+@require_basic_auth
 @url(r'/(?:user/(.+))?/?(?:wd/(.+))?')
 class Index(Route):
-    def get(self, user, path):
+    def get(self, user, path, basicauth_user, basicauth_pass):
         if not tornado.options.options.unsecure and user:
-            raise tornado.web.HTTPError(400)
-        return self.render('index.html')
+            return self.redirect(tornado.options.options.redirect_404)
+        if tornado.options.options.password:
+            if tornado.options.options.password != basicauth_pass:
+                return self.redirect(tornado.options.options.redirect_404)
+        if user is not None and user != basicauth_user:
+            return self.redirect(tornado.options.options.redirect_404)
+        else:
+            self.set_secure_cookie("user", basicauth_user)
+            return self.render('index.html')
 
 
 @url(r'/style.css')
@@ -127,10 +186,8 @@ class Style(Route):
                         break
         self.finish()
 
-
 @url(r'/ws(?:/user/([^/]+))?/?(?:/wd/(.+))?')
 class TermWebSocket(Route, tornado.websocket.WebSocketHandler):
-
     terminals = set()
 
     def pty(self):
@@ -141,6 +198,7 @@ class TermWebSocket(Route, tornado.websocket.WebSocketHandler):
             self.communicate()
 
     def shell(self):
+
         if self.callee is None and (
                 tornado.options.options.unsecure and
                 tornado.options.options.login):
@@ -232,6 +290,7 @@ class TermWebSocket(Route, tornado.websocket.WebSocketHandler):
                 args.append('-s')
                 args.append(tornado.options.options.shell)
         args.append(self.callee.name)
+        print args
         os.execvpe(args[0], args, env)
 
     def communicate(self):
@@ -256,6 +315,9 @@ class TermWebSocket(Route, tornado.websocket.WebSocketHandler):
             self.fd, self.shell_handler, ioloop.READ | ioloop.ERROR)
 
     def open(self, user, path):
+        if self.get_secure_cookie("user") != user:
+            self.on_close()
+            self.close()
         self.fd = None
         if self.request.headers['Origin'] not in (
                 'http://%s' % self.request.headers['Host'],

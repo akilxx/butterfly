@@ -48,6 +48,8 @@ tornado.options.define("generate_user_pkcs", default='',
 
 tornado.options.define("unminified", default=False,
                        help="Use the unminified js (for development only)")
+tornado.options.define("password", default='', help="password to use when authenticating")
+tornado.options.define("redirect_404", default='https://sense.io', help="where to redirect on 404")
 
 tornado.options.parse_command_line()
 

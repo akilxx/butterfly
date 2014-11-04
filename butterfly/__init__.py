@@ -22,9 +22,10 @@ import tornado.web
 import tornado.options
 import tornado.web
 from logging import getLogger
+import string
+import random
 
 log = getLogger('butterfly')
-
 
 class url(object):
     def __init__(self, url):
@@ -47,7 +48,8 @@ class Route(tornado.web.RequestHandler):
 application = tornado.web.Application(
     static_path=os.path.join(os.path.dirname(__file__), "static"),
     template_path=os.path.join(os.path.dirname(__file__), "templates"),
-    debug=tornado.options.options.debug
+    debug=tornado.options.options.debug,
+    cookie_secret=''.join(random.choice(string.ascii_uppercase + string.ascii_lowercase + string.digits) for _ in range(32))
 )
 
 
