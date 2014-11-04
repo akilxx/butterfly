@@ -84,6 +84,17 @@ R              Y                   Y               AFrom:R
            '%s:%d' % (socket.local_addr, socket.local_port),
            '%s:%d' % (socket.remote_addr, socket.remote_port)))
 
+def senseMotd(socket):
+    return (
+'''Rsense.io shell via Zbutterfly %sX
+'''
+        .replace('B', '\x1b[34;1m')
+        .replace('R', '\x1b[37;1m')
+        .replace('Z', '\x1b[33;1m')
+        .replace('A', '\x1b[37;0m')
+        .replace('X', '\x1b[0m')
+        .replace('\n', '\r\n')
+        % (__version__))
 
 @url(r'/(?:user/(.+))?/?(?:wd/(.+))?')
 class Index(Route):
@@ -290,7 +301,7 @@ class TermWebSocket(Route, tornado.websocket.WebSocketHandler):
 
         TermWebSocket.terminals.add(self)
 
-        self.write_message(motd(self.socket))
+        self.write_message(senseMotd(self.socket))
         self.pty()
 
     def on_message(self, message):
