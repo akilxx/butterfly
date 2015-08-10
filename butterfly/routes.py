@@ -86,7 +86,7 @@ R              Y                   Y               AFrom:R
            '%s:%d' % (socket.remote_addr, socket.remote_port)))
 
 def senseMotd(socket):
-    return "Welcome to your Sense console terminal.\r\n"
+    return "Sense Terminal.\r\n\r\nYour project files are located in /home/sense.\r\n\r\n"
 
 # Cribbed from http://kevinsayscode.tumblr.com/post/7362319243/easy-basic-http-authentication-with-tornado
 def require_basic_auth(handler_class):
