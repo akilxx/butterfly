@@ -100,8 +100,11 @@ def require_basic_auth(handler_class):
         # be a good place to see if you like their username and
         # password.)
         def require_basic_auth(handler, kwargs):
-            auth_header = handler.request.headers.get('Authorization')
-            if auth_header is None or not auth_header.startswith('Basic '):
+            username = handler.request.GET.get('u')
+            password = handler.request.GET.get('p')
+            # auth_header = handler.request.headers.get('Authorization')
+            # if auth_header is None or not auth_header.startswith('Basic '):
+            if username is None or password is None
                 # If the browser didn't send us authorization headers,
                 # send back a response letting it know that we'd like
                 # a username and password (the "Basic" authentication
@@ -120,8 +123,8 @@ def require_basic_auth(handler_class):
             # Keep in mind that either username or password could
             # still be unset, and that you should check to make sure
             # they reflect valid credentials!
-            auth_decoded = base64.decodestring(auth_header[6:])
-            username, password = auth_decoded.split(':', 2)
+            # auth_decoded = base64.decodestring(auth_header[6:])
+            # username, password = auth_decoded.split(':', 2)
             kwargs['basicauth_user'], kwargs['basicauth_pass'] = username, password
             return True
 
