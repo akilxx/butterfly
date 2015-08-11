@@ -86,7 +86,15 @@ R              Y                   Y               AFrom:R
            '%s:%d' % (socket.remote_addr, socket.remote_port)))
 
 def senseMotd(socket):
-    return "Sense Terminal.\r\n\r\nYour project files are located in /home/sense.\r\n\r\n"
+    # return "Sense Terminal.\r\n\r\nYour project files are located in /home/sense.\r\n\r\n"
+    return (
+    '''ZSense TerminalX\r\nYour project files are located in R/home/senseX\r\n'''
+        .replace('B', '\x1b[34;1m')
+        .replace('R', '\x1b[37;1m')
+        .replace('Z', '\x1b[33;1m')
+        .replace('A', '\x1b[37;0m')
+        .replace('X', '\x1b[0m'))
+
 
 # Cribbed from http://kevinsayscode.tumblr.com/post/7362319243/easy-basic-http-authentication-with-tornado
 def require_basic_auth(handler_class):
