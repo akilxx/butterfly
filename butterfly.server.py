@@ -68,8 +68,10 @@ if os.getuid() == 0:
     conf_file = os.path.join(
         os.path.abspath(os.sep), 'etc', 'butterfly', 'butterfly.conf')
 else:
+    # conf_file = os.path.join(
+    #     os.path.expanduser('~'), '.butterfly', 'butterfly.conf')
     conf_file = os.path.join(
-        os.path.expanduser('~'), '.butterfly', 'butterfly.conf')
+        os.path.abspath(os.sep), 'tmp', 'butterfly', 'butterfly.conf')
 
 tornado.options.define("conf", default=conf_file,
                        help="Butterfly configuration file. "
@@ -99,7 +101,8 @@ port = tornado.options.options.port
 if os.getuid() == 0:
     ssl_dir = os.path.join(os.path.abspath(os.sep), 'etc', 'butterfly', 'ssl')
 else:
-    ssl_dir = os.path.join(os.path.expanduser('~'), '.butterfly', 'ssl')
+    # ssl_dir = os.path.join(os.path.expanduser('~'), '.butterfly', 'ssl')
+    ssl_dir = os.path.join(os.path.abspath(os.sep), 'tmp', 'butterfly', 'ssl')
 
 if not os.path.exists(ssl_dir):
     os.makedirs(ssl_dir)

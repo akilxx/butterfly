@@ -41,7 +41,9 @@ def get_style():
     for ext in ['css', 'scss', 'sass']:
         for fn in [
                 '/etc/butterfly/%sstyle' % theme,
-                os.path.expanduser('~/.butterfly/%sstyle' % theme)]:
+                # os.path.expanduser('~/.butterfly/%sstyle' % theme)
+                os.path.join(os.path.abspath(os.sep), 'tmp', 'butterfly', theme)
+                ]:
             if os.path.exists('%s.%s' % (fn, ext)):
                 style = '%s.%s' % (fn, ext)
 

@@ -168,7 +168,9 @@ class Font(Route):
             name)
         for fn in [
                 '/etc/butterfly/%s' % font,
-                os.path.expanduser('~/.butterfly/%s' % font)]:
+                # os.path.expanduser('~/.butterfly/%s' % font)
+                os.path.join(os.path.abspath(os.sep), 'tmp', 'butterfly', font)
+                ]:
             if os.path.exists(fn):
                 ext = fn.split('.')[-1]
                 self.set_header("Content-Type", "application/x-font-%s" % ext)
