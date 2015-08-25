@@ -21,6 +21,7 @@ import tornado.options
 import tornado.ioloop
 import tornado.httpserver
 import tornado_systemd
+import logging
 import uuid
 import ssl
 import getpass
@@ -29,32 +30,57 @@ import stat
 import socket
 import sys
 
-
 tornado.options.define("debug", default=False, help="Debug mode")
 tornado.options.define("more", default=False,
                        help="Debug mode with more verbosity")
 tornado.options.define("host", default='localhost', help="Server host")
 tornado.options.define("port", default=57575, type=int, help="Server port")
 tornado.options.define("shell", help="Shell to execute at login")
+tornado.options.define("motd", default='motd', help="Path to the motd file.")
+tornado.options.define("cmd",
+                       help="Command to run instead of shell, f.i.: 'ls -l'")
 tornado.options.define("unsecure", default=False,
                        help="Don't use ssl not recommended")
+tornado.options.define("force_unicode_width",
+                       default=False,
+                       help="Force all unicode characters to the same width."
+                       "Useful for avoiding layout mess.")
 tornado.options.define("login", default=True,
                        help="Use login screen at start")
-
+tornado.options.define("ssl_version", default=None,
+                       help="SSL protocol version")
 tornado.options.define("generate_certs", default=False,
                        help="Generate butterfly certificates")
+tornado.options.define("generate_current_user_pkcs", default=False,
+                       help="Generate current user pfx for client "
+                       "authentication")
 tornado.options.define("generate_user_pkcs", default='',
-                       help="Generate user pfx for client authentication")
-
+                       help="Generate user pfx for client authentication "
+                       "(Must be root to create for another user)")
 tornado.options.define("unminified", default=False,
                        help="Use the unminified js (for development only)")
 tornado.options.define("password", default='', help="password to use when authenticating")
 tornado.options.define("redirect_404", default='https://sense.io', help="where to redirect on 404")
+tornado.options.define("theme", default=None,
+                       help="Specify a theme for butterfly.")
+
+if os.getuid() == 0:
+    conf_file = os.path.join(
+        os.path.abspath(os.sep), 'etc', 'butterfly', 'butterfly.conf')
+else:
+    conf_file = os.path.join(
+        os.path.expanduser('~'), '.butterfly', 'butterfly.conf')
+
+tornado.options.define("conf", default=conf_file,
+                       help="Butterfly configuration file. "
+                       "Contains the same options as command line.")
+
+if os.path.exists(conf_file):
+    tornado.options.parse_config_file(conf_file)
 
 tornado.options.parse_command_line()
 
 
-import logging
 for logger in ('tornado.access', 'tornado.application',
                'tornado.general', 'butterfly'):
     level = logging.WARNING
@@ -123,7 +149,7 @@ if tornado.options.options.generate_certs:
         ca_cert.gmtime_adj_notAfter(315360000)  # to 10y
         ca_cert.set_issuer(ca_cert.get_subject())  # Self signed
         ca_cert.set_pubkey(ca_pk)
-        ca_cert.sign(ca_pk, 'sha1')
+        ca_cert.sign(ca_pk, 'sha512')
 
         write(ca, crypto.dump_certificate(crypto.FILETYPE_PEM, ca_cert))
         write(ca_key, crypto.dump_privatekey(crypto.FILETYPE_PEM, ca_pk))
@@ -143,7 +169,7 @@ if tornado.options.options.generate_certs:
     server_cert.gmtime_adj_notAfter(315360000)  # to 10y
     server_cert.set_issuer(ca_cert.get_subject())  # Signed by ca
     server_cert.set_pubkey(server_pk)
-    server_cert.sign(ca_pk, 'sha1')
+    server_cert.sign(ca_pk, 'sha512')
 
     write(cert % host, crypto.dump_certificate(
         crypto.FILETYPE_PEM, server_cert))
@@ -156,13 +182,29 @@ if tornado.options.options.generate_certs:
     sys.exit(0)
 
 
-if tornado.options.options.generate_user_pkcs:
+if (tornado.options.options.generate_current_user_pkcs or
+        tornado.options.options.generate_user_pkcs):
+    from butterfly import utils
+    try:
+        current_user = utils.User()
+    except Exception:
+        current_user = None
+
     from OpenSSL import crypto
     if not all(map(os.path.exists, [ca, ca_key])):
         print('Please generate certificates using --generate-certs before')
         sys.exit(1)
 
-    user = tornado.options.options.generate_user_pkcs
+    if tornado.options.options.generate_current_user_pkcs:
+        user = current_user.name
+    else:
+        user = tornado.options.options.generate_user_pkcs
+
+    if user != current_user.name and current_user.uid != 0:
+        print('Cannot create certificate for another user with '
+              'current privileges.')
+        sys.exit(1)
+
     ca_cert = crypto.load_certificate(crypto.FILETYPE_PEM, read(ca))
     ca_pk = crypto.load_privatekey(crypto.FILETYPE_PEM, read(ca_key))
 
@@ -177,8 +219,8 @@ if tornado.options.options.generate_user_pkcs:
     client_cert.gmtime_adj_notAfter(315360000)  # to 10y
     client_cert.set_issuer(ca_cert.get_subject())  # Signed by ca
     client_cert.set_pubkey(client_pk)
-    client_cert.sign(client_pk, 'sha1')
-    client_cert.sign(ca_pk, 'sha1')
+    client_cert.sign(client_pk, 'sha512')
+    client_cert.sign(ca_pk, 'sha512')
 
     pfx = crypto.PKCS12()
     pfx.set_certificate(client_cert)
@@ -220,34 +262,31 @@ else:
         'ca_certs': ca,
         'cert_reqs': ssl.CERT_REQUIRED
     }
-
+    if tornado.options.options.ssl_version is not None:
+        if not hasattr(
+                ssl, 'PROTOCOL_%s' % tornado.options.options.ssl_version):
+            print(
+                "Unknown SSL protocol %s" %
+                tornado.options.options.ssl_version)
+            sys.exit(1)
+        ssl_opts['ssl_version'] = getattr(
+            ssl, 'PROTOCOL_%s' % tornado.options.options.ssl_version)
 
 from butterfly import application
 
 http_server = tornado_systemd.SystemdHTTPServer(
     application, ssl_options=ssl_opts)
 http_server.listen(port, address=host)
-url = "http%s://%s:%d/*" % (
-    "s" if not tornado.options.options.unsecure else "", host, port)
 
 if http_server.systemd:
     os.environ.pop('LISTEN_PID')
     os.environ.pop('LISTEN_FDS')
 
-# This is for debugging purpose
-try:
-    from wsreload.client import sporadic_reload, watch
-except ImportError:
-    log.debug('wsreload not found')
-else:
-    sporadic_reload({'url': url})
-
-    files = ['butterfly/static/javascripts/',
-             'butterfly/static/stylesheets/',
-             'butterfly/templates/']
-    watch({'url': url}, files, unwatch_at_exit=True)
-
 log.info('Starting loop')
 
 ioloop = tornado.ioloop.IOLoop.instance()
+
+url = "http%s://%s:%d/" % (
+    "s" if not tornado.options.options.unsecure else "", host, port)
+log.warn('Butterfly is ready, open your browser to: %s' % url)
 ioloop.start()

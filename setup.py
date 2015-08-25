@@ -31,8 +31,11 @@ options = dict(
             'static/fonts/*',
             'static/images/favicon.png',
             'static/main.css',
+            'static/html-sanitizer.js',
             'static/*.min.js',
-            'templates/index.html'
+            'templates/index.html',
+            'bin/*',
+            'templates/motd'
         ]
     },
     classifiers=[
