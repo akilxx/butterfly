@@ -1585,7 +1585,7 @@
       if ((ev.shiftKey && ev.ctrlKey) && ((ref = ev.keyCode) === 67 || ref === 86)) {
         return true;
       }
-      cancel(ev);
+      // cancel(ev);
       if (ev.charCode) {
         key = ev.charCode;
       } else if (ev.which == null) {
