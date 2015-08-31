@@ -204,14 +204,14 @@
       })(this));
     }
 
-    Terminal.prototype.cloneAttr = function(a, char) {
-      if (char == null) {
-        char = null;
+    Terminal.prototype.cloneAttr = function(a, ch) {
+      if (ch == null) {
+        ch = null;
       }
       return {
         bg: a.bg,
         fg: a.fg,
-        ch: char !== null ? char : a.ch,
+        ch: ch !== null ? ch : a.ch,
         bold: a.bold,
         underline: a.underline,
         blink: a.blink,
