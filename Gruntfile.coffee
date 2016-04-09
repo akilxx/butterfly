@@ -34,10 +34,6 @@ module.exports = (grunt) ->
           'butterfly/static/main.js': 'coffees/*.coffee'
           'butterfly/static/ext.js':  'coffees/ext/*.coffee'
 
-    coffeelint:
-      butterfly:
-        'coffees/*.coffee'
-
     watch:
       options:
         livereload: true
@@ -62,7 +58,7 @@ module.exports = (grunt) ->
   grunt.loadNpmTasks 'grunt-coffeelint'
   grunt.loadNpmTasks 'grunt-sass'
   grunt.registerTask 'dev', [
-    'coffeelint', 'coffee', 'sass', 'watch']
+    'coffee', 'sass', 'watch']
   grunt.registerTask 'css', ['sass']
   grunt.registerTask 'default', [
-    'coffeelint', 'coffee', 'sass', 'uglify']
+    'coffee', 'sass', 'uglify']
