@@ -505,8 +505,7 @@ class Terminal
 
       lines = document.querySelectorAll('.line')
       if lines.length > @scrollback
-        for line in Array.prototype.slice.call(
-          lines, 0, lines.length - @scrollback)
+        for line in Array.prototype.slice.call(lines, 0, lines.length - @scrollback)
           line.remove()
         for group in document.querySelectorAll('.group:empty')
           group.remove()
@@ -2332,7 +2331,7 @@ class Terminal
         when 25 # show cursor
           @cursorHidden = false
         # alt screen buffer cursor
-        #@saveCursor();
+        #@saveCursor()
         when 1049, 47, 1047 # alt screen buffer
           unless @normal
             normal =
