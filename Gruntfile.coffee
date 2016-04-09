@@ -47,7 +47,7 @@ module.exports = (grunt) ->
           'coffees/*.coffee'
           'Gruntfile.coffee'
         ]
-        tasks: ['coffeelint', 'coffee']
+        tasks: ['coffee']
 
       sass:
         files: [
